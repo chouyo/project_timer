@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import 'package:project_timer/timer_sound_helper.dart';
 import 'package:project_timer/notification_helper.dart';
 import 'package:project_timer/config_service.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 
 class TimerService {
   static final TimerService _instance = TimerService._internal();
@@ -47,6 +48,7 @@ class TimerService {
         _startTimerInternal(i);
       }
     }
+    _startBackgroundService();
   }
 
   Future<void> saveTimers() async {
@@ -140,6 +142,10 @@ class TimerService {
       t.timer?.cancel();
     }
     saveTimers();
+  }
+
+  void _startBackgroundService() {
+    FlutterBackgroundService().startService();
   }
 }
 

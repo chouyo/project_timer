@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationHelper {
@@ -33,5 +34,6 @@ class NotificationHelper {
     const NotificationDetails details =
         NotificationDetails(android: androidDetails, iOS: iosDetails);
     await _plugin.show(id, title, body, details);
+    debugPrint('Notification shown: id=$id, title=$title, body=$body');
   }
 }

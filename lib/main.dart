@@ -13,7 +13,6 @@ import 'dart:io' show Platform;
 import 'package:window_manager/window_manager.dart';
 import 'config_service.dart';
 import 'app_themes.dart';
-import 'package:flutter_advanced_segment/flutter_advanced_segment.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
