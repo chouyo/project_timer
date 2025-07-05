@@ -16,13 +16,21 @@ import 'app_themes.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'native_timezone_channel.dart';
+import 'timer_service_manager.dart';
+import 'notification_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await NotificationHelper.init();
+
+  // 注册全局生命周期监听
+  TimerServiceManager().init();
+
   // 初始化时区
   tz.initializeTimeZones();
   final String ianaName = await NativeTimezoneChannel.getLocalTimezone();
+  debugPrint('Local IANA timezone: $ianaName');
   tz.setLocalLocation(tz.getLocation(ianaName));
 
   // 桌面端设置最小窗口尺寸

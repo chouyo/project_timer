@@ -57,10 +57,10 @@ class TimerService {
 
   void _log(String action, {TimerData? timer}) {
     if (timer != null) {
-      print(
+      debugPrint(
           '[TimerService] $action: id=${timer.id}, name=${timer.name}, createdAt=${timer.createdAt}, updatedAt=${timer.updatedAt}');
     } else {
-      print('[TimerService] $action');
+      debugPrint('[TimerService] $action');
     }
   }
 
@@ -130,7 +130,7 @@ class TimerService {
     timersNotifier.value = List.from(timers);
     saveTimers();
     // 取消本地通知
-    NotificationHelper.cancelNotification(timerData.id.hashCode);
+    //NotificationHelper.cancelNotification(timerData.id.hashCode);
   }
 
   void resetTimer(int index) {
