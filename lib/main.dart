@@ -13,24 +13,38 @@ import 'dart:io' show Platform;
 import 'package:window_manager/window_manager.dart';
 import 'config_service.dart';
 import 'app_themes.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'native_timezone_channel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化时区
+  tz.initializeTimeZones();
+  final String ianaName = await NativeTimezoneChannel.getLocalTimezone();
+  tz.setLocalLocation(tz.getLocation(ianaName));
+
   // 桌面端设置最小窗口尺寸
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     await windowManager.ensureInitialized();
     await windowManager.setMinimumSize(const Size(640, 480));
   }
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky); // 全屏显示
+
+  // 全屏显示
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
   // 预加载数据，防止UI闪烁
   await TimerService().loadTimers();
   await AnniversaryService().loadAnniversaries();
+
   // 加载主题配置，并设置Notifier初始值，保证通知UI更新的逻辑是正确的
   await ConfigService().loadConfig();
+
   // 设置初始入口页面
   runApp(const MainApp());
 }

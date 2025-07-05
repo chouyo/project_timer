@@ -6,7 +6,6 @@ import 'package:uuid/uuid.dart';
 import 'package:project_timer/timer_sound_helper.dart';
 import 'package:project_timer/notification_helper.dart';
 import 'package:project_timer/config_service.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
 
 class TimerService {
   static final TimerService _instance = TimerService._internal();
@@ -48,7 +47,6 @@ class TimerService {
         _startTimerInternal(i);
       }
     }
-    _startBackgroundService();
   }
 
   Future<void> saveTimers() async {
@@ -92,6 +90,16 @@ class TimerService {
     _startTimerInternal(index);
     timersNotifier.value = List.from(timers);
     saveTimers();
+    // 注册将来的本地通知
+    final timer = timers[index];
+    if (!timer.isFinished && timer.remainingSeconds > 0) {
+      NotificationHelper.scheduleTimerFinishedNotification(
+        id: timer.id.hashCode,
+        title: '倒计时结束',
+        body: '${timer.name} 完成',
+        secondsFromNow: timer.remainingSeconds,
+      );
+    }
   }
 
   void _startTimerInternal(int index) {
@@ -106,11 +114,7 @@ class TimerService {
         timerData.isRunning = false;
         timerData.timer?.cancel();
         TimerSoundHelper.playFinishSound(); // 播放提示音
-        NotificationHelper.showTimerFinishedNotification(
-          id: timerData.id.hashCode,
-          title: '倒计时结束',
-          body: '${timerData.name} 完成',
-        );
+        // 这里不再立即推送通知，由schedule保证
       }
       timersNotifier.value = List.from(timers);
       saveTimers();
@@ -125,6 +129,8 @@ class TimerService {
     timerData.isRunning = false;
     timersNotifier.value = List.from(timers);
     saveTimers();
+    // 取消本地通知
+    NotificationHelper.cancelNotification(timerData.id.hashCode);
   }
 
   void resetTimer(int index) {
@@ -135,6 +141,8 @@ class TimerService {
     timerData.isRunning = false;
     timersNotifier.value = List.from(timers);
     saveTimers();
+    // 取消本地通知
+    NotificationHelper.cancelNotification(timerData.id.hashCode);
   }
 
   void dispose() {
@@ -142,10 +150,6 @@ class TimerService {
       t.timer?.cancel();
     }
     saveTimers();
-  }
-
-  void _startBackgroundService() {
-    FlutterBackgroundService().startService();
   }
 }
 
@@ -160,6 +164,7 @@ class TimerData {
   Timer? timer;
   final DateTime createdAt;
   DateTime updatedAt;
+
   TimerData({
     String? id,
     required this.name,
@@ -170,6 +175,7 @@ class TimerData {
     required this.color,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.timer,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -185,19 +191,26 @@ class TimerData {
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
+
   factory TimerData.fromJson(Map<String, dynamic> json) => TimerData(
-        id: json['id'],
-        name: json['name'],
-        totalSeconds: json['totalSeconds'],
-        remainingSeconds: json['remainingSeconds'],
-        isFinished: json['isFinished'],
-        isRunning: json['isRunning'],
-        color: Color(json['color']),
+        id: json['id'] as String?,
+        name: json['name'] as String,
+        totalSeconds: json['totalSeconds'] is int
+            ? json['totalSeconds']
+            : int.tryParse(json['totalSeconds'].toString()) ?? 0,
+        remainingSeconds: json['remainingSeconds'] is int
+            ? json['remainingSeconds']
+            : int.tryParse(json['remainingSeconds'].toString()) ?? 0,
+        isFinished: json['isFinished'] as bool? ?? false,
+        isRunning: json['isRunning'] as bool? ?? false,
+        color: Color(json['color'] is int
+            ? json['color']
+            : int.tryParse(json['color'].toString()) ?? 0),
         createdAt: json['createdAt'] != null
-            ? DateTime.parse(json['createdAt'])
+            ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()
             : DateTime.now(),
         updatedAt: json['updatedAt'] != null
-            ? DateTime.parse(json['updatedAt'])
+            ? DateTime.tryParse(json['updatedAt']) ?? DateTime.now()
             : DateTime.now(),
       );
 }

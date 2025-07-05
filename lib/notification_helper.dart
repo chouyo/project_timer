@@ -1,39 +1,76 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart';
+import 'package:timezone/data/latest_all.dart';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:flutter/services.dart';
 
 class NotificationHelper {
   static final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
-  static bool _initialized = false;
 
   static Future<void> init() async {
-    if (_initialized) return;
+    // 初始化通知（仅需调用一次）
     const AndroidInitializationSettings androidInit =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings iosInit = DarwinInitializationSettings();
     const InitializationSettings initSettings =
-        InitializationSettings(android: androidInit, iOS: iosInit);
+        InitializationSettings(android: androidInit);
     await _plugin.initialize(initSettings);
-    _initialized = true;
   }
 
-  static Future<void> showTimerFinishedNotification(
-      {required int id, required String title, required String body}) async {
-    await init();
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      'timer_channel',
-      '倒计时提醒',
-      channelDescription: '倒计时结束提醒',
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: false,
+  static Future<void> scheduleTimerFinishedNotification({
+    required int id,
+    required String title,
+    required String body,
+    required int secondsFromNow,
+  }) async {
+    final localPath = await copyAssetToFile('assets/images/1.jpeg', '1.jpeg');
+
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      TZDateTime.now(local).add(Duration(seconds: secondsFromNow)),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'timer_channel',
+          '倒计时',
+          importance: Importance.max,
+          priority: Priority.high,
+          playSound: true,
+          enableVibration: true,
+          vibrationPattern: Int64List.fromList([0, 500, 200, 500]),
+          styleInformation: BigPictureStyleInformation(
+            FilePathAndroidBitmap(localPath),
+            contentTitle: title,
+            summaryText: body,
+          ),
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentSound: true,
+          presentBadge: true,
+          attachments: [DarwinNotificationAttachment(localPath)],
+        ),
+      ),
+      androidAllowWhileIdle: false,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: null,
     );
-    const DarwinNotificationDetails iosDetails =
-        DarwinNotificationDetails(presentSound: false);
-    const NotificationDetails details =
-        NotificationDetails(android: androidDetails, iOS: iosDetails);
-    await _plugin.show(id, title, body, details);
-    debugPrint('Notification shown: id=$id, title=$title, body=$body');
+  }
+
+  static Future<void> cancelNotification(int id) async {
+    await _plugin.cancel(id);
+  }
+
+  static Future<String> copyAssetToFile(
+      String assetPath, String filename) async {
+    final byteData = await rootBundle.load(assetPath);
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/$filename');
+    await file.writeAsBytes(byteData.buffer.asUint8List());
+    return file.path;
   }
 }
