@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:project_timer/anniversary_service.dart';
 import 'anniversary_base_controller.dart';
+import 'dart:io';
 
 // 新建详情页
 class AnniversaryDetailPage extends StatefulWidget {
   final Anniversary ann;
-  final String? imageAsset;
-  const AnniversaryDetailPage({required this.ann, this.imageAsset, super.key});
+  const AnniversaryDetailPage({required this.ann, super.key});
 
   @override
   State<AnniversaryDetailPage> createState() => _AnniversaryDetailPageState();
@@ -85,18 +85,29 @@ class _AnniversaryDetailPageState
                 curve: Curves.ease,
                 child: Material(
                   color: Colors.transparent,
-                  child: (_currentAnn.imageAsset != null &&
-                          _currentAnn.imageAsset!.isNotEmpty)
-                      ? Image.asset(
-                          _currentAnn.imageAsset!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          color: Colors.black.withOpacity(0.2),
-                          colorBlendMode: BlendMode.darken,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(color: Colors.grey[300]),
-                        )
+                  child: (_currentAnn.imageLocalPath != null ||
+                          _currentAnn.imageNetworkUrl != null)
+                      ? _currentAnn.imageLocalPath != null
+                          ? Image.file(
+                              File(_currentAnn.imageLocalPath!),
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              color: Colors.black.withOpacity(0.2),
+                              colorBlendMode: BlendMode.darken,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(color: Colors.grey[300]),
+                            )
+                          : Image.network(
+                              _currentAnn.imageNetworkUrl!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              color: Colors.black.withOpacity(0.2),
+                              colorBlendMode: BlendMode.darken,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(color: Colors.grey[300]),
+                            )
                       : Container(color: Colors.grey[200]),
                 ),
               ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:numberpicker/numberpicker.dart';
 import 'package:project_timer/anniversary_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:project_timer/date_picker_field.dart';
 import 'dart:ui';
+import 'dart:io';
 
 /// 纪念日相关页面的通用Controller基类，便于后续扩展业务逻辑
 abstract class AnniversaryBaseController<T extends StatefulWidget>
@@ -51,18 +53,11 @@ abstract class AnniversaryBaseController<T extends StatefulWidget>
   Future<void> showAnniversarySheet({Anniversary? ann}) async {
     final isEdit = ann != null;
     String name = isEdit ? ann.name : '';
-    DateTime date = isEdit ? ann.date : DateTime.now();
-    int selectedYear = date.year;
-    int selectedMonth = date.month;
-    int selectedDay = date.day;
-    int selectedImageIndex = 0;
-    final imageAssets = AnniversaryService.imageAssets;
-    if (isEdit &&
-        ann.imageAsset != null &&
-        imageAssets.contains(ann.imageAsset)) {
-      selectedImageIndex = imageAssets.indexOf(ann.imageAsset!);
-    }
+    DateTime selectedDate = isEdit ? ann.date : DateTime.now();
+    String? selectedImageLocalPath = isEdit ? ann.imageLocalPath : null;
+    String? selectedImageNetworkUrl = isEdit ? ann.imageNetworkUrl : null;
     final nameController = TextEditingController(text: name);
+    final imagePicker = ImagePicker();
 
     await showModalBottomSheet<Anniversary>(
       context: context,
@@ -96,9 +91,6 @@ abstract class AnniversaryBaseController<T extends StatefulWidget>
                   ),
                   child: StatefulBuilder(
                     builder: (context, setStateSheet) {
-                      int daysInMonth =
-                          DateTime(selectedYear, selectedMonth + 1, 0).day;
-                      if (selectedDay > daysInMonth) selectedDay = daysInMonth;
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -120,17 +112,14 @@ abstract class AnniversaryBaseController<T extends StatefulWidget>
                                       nameController.text.trim().isEmpty
                                           ? '某天'
                                           : nameController.text.trim();
-                                  final newDate = DateTime(
-                                      selectedYear, selectedMonth, selectedDay);
-                                  final imgAsset =
-                                      imageAssets[selectedImageIndex];
                                   final now = DateTime.now();
                                   Navigator.of(context).pop(
                                     Anniversary(
                                       id: isEdit ? ann.id : null,
                                       name: annName,
-                                      date: newDate,
-                                      imageAsset: imgAsset,
+                                      date: selectedDate,
+                                      imageLocalPath: selectedImageLocalPath,
+                                      imageNetworkUrl: selectedImageNetworkUrl,
                                       createdAt: isEdit ? ann.createdAt : now,
                                       updatedAt: now,
                                     ),
@@ -149,103 +138,131 @@ abstract class AnniversaryBaseController<T extends StatefulWidget>
                             onChanged: (v) => name = v,
                           ),
                           const SizedBox(height: 16),
-                          // 图片选择器
-                          SizedBox(
-                            height: 72,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: imageAssets.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 12),
-                              itemBuilder: (context, idx) {
-                                return GestureDetector(
-                                  onTap: () => setStateSheet(
-                                      () => selectedImageIndex = idx),
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.asset(
-                                          imageAssets[idx],
-                                          width: 64,
-                                          height: 64,
-                                          fit: BoxFit.cover,
-                                        ),
+                          // 图片选择入口
+                          if (selectedImageLocalPath == null &&
+                              selectedImageNetworkUrl == null)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
                                       ),
-                                      if (selectedImageIndex == idx)
-                                        Container(
-                                          width: 64,
-                                          height: 64,
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary,
-                                              width: 3,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                        ),
-                                    ],
+                                    ),
+                                    onPressed: () async {
+                                      try {
+                                        final pickedFile =
+                                            await imagePicker.pickImage(
+                                          source: ImageSource.gallery,
+                                        );
+                                        if (pickedFile != null) {
+                                          setStateSheet(() {
+                                            selectedImageLocalPath =
+                                                pickedFile.path;
+                                            selectedImageNetworkUrl = null;
+                                          });
+                                        }
+                                      } catch (e) {
+                                        debugPrint('Error picking image: $e');
+                                      }
+                                    },
+                                    icon: const Icon(Icons.image),
+                                    label: const Text('本地图库'),
                                   ),
-                                );
-                              },
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      // TODO: 实现网络图片选择功能
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text('网络图片功能即将推出')),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.link),
+                                    label: const Text('网络图片'),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
+                          if (selectedImageLocalPath != null) ...[
+                            //const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    File(selectedImageLocalPath!),
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                      width: 60,
+                                      height: 60,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.broken_image),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    '已选择本地图片',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () => setStateSheet(() {
+                                    selectedImageLocalPath = null;
+                                  }),
+                                  icon: const Icon(Icons.cancel),
+                                ),
+                              ],
+                            ),
+                          ] else if (selectedImageNetworkUrl != null) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                const Icon(Icons.check_circle,
+                                    color: Colors.green, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    selectedImageNetworkUrl!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => setStateSheet(() {
+                                    selectedImageNetworkUrl = null;
+                                  }),
+                                  child: const Text('取消'),
+                                ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Column(
-                                children: [
-                                  const Text('年'),
-                                  NumberPicker(
-                                    minValue: 1900,
-                                    maxValue: 2100,
-                                    value: selectedYear,
-                                    onChanged: (v) {
-                                      HapticFeedback.lightImpact();
-                                      setStateSheet(() => selectedYear = v);
-                                    },
-                                    infiniteLoop: true, // 允许循环滚动
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 8),
-                              Column(
-                                children: [
-                                  const Text('月'),
-                                  NumberPicker(
-                                    minValue: 1,
-                                    maxValue: 12,
-                                    value: selectedMonth,
-                                    onChanged: (v) {
-                                      HapticFeedback.lightImpact();
-                                      setStateSheet(() => selectedMonth = v);
-                                    },
-                                    infiniteLoop: true, // 允许循环滚动
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 8),
-                              Column(
-                                children: [
-                                  const Text('日'),
-                                  NumberPicker(
-                                    minValue: 1,
-                                    maxValue: daysInMonth,
-                                    value: selectedDay,
-                                    onChanged: (v) {
-                                      HapticFeedback.lightImpact();
-                                      setStateSheet(() => selectedDay = v);
-                                    },
-                                    infiniteLoop: true, // 允许循环滚动
-                                  ),
-                                ],
-                              ),
-                            ],
+                          // 日期选择器
+                          DatePickerField(
+                            initialDate: selectedDate,
+                            labelText: '选择日期',
+                            onDateChanged: (date) {
+                              selectedDate = date;
+                            },
                           ),
                           const SizedBox(height: 32),
                         ],

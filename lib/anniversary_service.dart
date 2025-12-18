@@ -9,14 +9,6 @@ class AnniversaryService {
   factory AnniversaryService() => _instance;
   AnniversaryService._internal();
 
-  static const List<String> imageAssets = [
-    'assets/images/1.jpeg',
-    'assets/images/2.jpeg',
-    'assets/images/3.jpeg',
-    'assets/images/4.jpeg'
-    // 可根据实际图片数量继续添加
-  ];
-
   final ValueNotifier<List<Anniversary>> anniversariesNotifier =
       ValueNotifier([]);
   List<Anniversary> get anniversaries => anniversariesNotifier.value;
@@ -90,14 +82,16 @@ class Anniversary {
   final String id;
   final String name;
   final DateTime date;
-  final String? imageAsset;
+  final String? imageLocalPath; // 本地文件路径
+  final String? imageNetworkUrl; // 网络图片URL
   final DateTime createdAt;
   final DateTime updatedAt;
   Anniversary({
     String? id,
     required this.name,
     required this.date,
-    this.imageAsset,
+    this.imageLocalPath,
+    this.imageNetworkUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : id = id ?? const Uuid().v4(),
@@ -108,7 +102,8 @@ class Anniversary {
         'id': id,
         'name': name,
         'date': date.toIso8601String(),
-        if (imageAsset != null) 'imageAsset': imageAsset,
+        if (imageLocalPath != null) 'imageLocalPath': imageLocalPath,
+        if (imageNetworkUrl != null) 'imageNetworkUrl': imageNetworkUrl,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -116,7 +111,8 @@ class Anniversary {
         id: json['id'],
         name: json['name'],
         date: DateTime.parse(json['date']),
-        imageAsset: json['imageAsset'],
+        imageLocalPath: json['imageLocalPath'],
+        imageNetworkUrl: json['imageNetworkUrl'],
         createdAt: json['createdAt'] != null
             ? DateTime.parse(json['createdAt'])
             : null,

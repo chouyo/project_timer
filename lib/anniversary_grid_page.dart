@@ -3,6 +3,7 @@ import 'package:project_timer/anniversary_service.dart';
 import 'package:project_timer/anniversary_detail_page.dart';
 import 'package:project_timer/config_service.dart';
 import 'anniversary_base_controller.dart';
+import 'dart:io';
 
 class AnniversaryGridPage extends StatefulWidget {
   const AnniversaryGridPage({super.key});
@@ -79,8 +80,7 @@ class _AnniversaryGridPageState
                           transitionDuration: const Duration(milliseconds: 420),
                           pageBuilder:
                               (context, animation, secondaryAnimation) =>
-                                  AnniversaryDetailPage(
-                                      ann: ann, imageAsset: ann.imageAsset),
+                                  AnniversaryDetailPage(ann: ann),
                           transitionsBuilder:
                               (context, animation, secondaryAnimation, child) {
                             return FadeTransition(
@@ -102,16 +102,27 @@ class _AnniversaryGridPageState
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            if (ann.imageAsset != null &&
-                                ann.imageAsset!.isNotEmpty)
-                              Image.asset(
-                                ann.imageAsset!,
-                                fit: BoxFit.cover,
-                                color: Colors.black.withOpacity(0.2),
-                                colorBlendMode: BlendMode.darken,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(color: Colors.grey[300]),
-                              )
+                            if (ann.imageLocalPath != null ||
+                                ann.imageNetworkUrl != null)
+                              ann.imageLocalPath != null
+                                  ? Image.file(
+                                      File(ann.imageLocalPath!),
+                                      fit: BoxFit.cover,
+                                      color: Colors.black.withOpacity(0.2),
+                                      colorBlendMode: BlendMode.darken,
+                                      errorBuilder: (context, error,
+                                              stackTrace) =>
+                                          Container(color: Colors.grey[300]),
+                                    )
+                                  : Image.network(
+                                      ann.imageNetworkUrl!,
+                                      fit: BoxFit.cover,
+                                      color: Colors.black.withOpacity(0.2),
+                                      colorBlendMode: BlendMode.darken,
+                                      errorBuilder: (context, error,
+                                              stackTrace) =>
+                                          Container(color: Colors.grey[300]),
+                                    )
                             else
                               Container(color: Colors.grey[200]),
                             Container(
