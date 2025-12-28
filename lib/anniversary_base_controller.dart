@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:project_timer/anniversary_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:project_timer/date_picker_field.dart';
+import 'package:project_timer/pexels/conifg.dart';
 import 'dart:ui';
 import 'dart:io';
+
+import 'package:project_timer/pexels/pexels.dart';
 
 /// 纪念日相关页面的通用Controller基类，便于后续扩展业务逻辑
 abstract class AnniversaryBaseController<T extends StatefulWidget>
@@ -179,13 +182,19 @@ abstract class AnniversaryBaseController<T extends StatefulWidget>
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                     ),
-                                    onPressed: () {
-                                      // TODO: 实现网络图片选择功能
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content: Text('网络图片功能即将推出')),
+                                    onPressed: () async {
+                                      final url =
+                                          await showPexelsImagePickerPage(
+                                        context,
+                                        apiKey: APIKey,
+                                        title: '选择图片',
                                       );
+                                      if (url != null && url.isNotEmpty) {
+                                        setStateSheet(() {
+                                          selectedImageNetworkUrl = url;
+                                          selectedImageLocalPath = null;
+                                        });
+                                      }
                                     },
                                     icon: const Icon(Icons.link),
                                     label: const Text('网络图片'),
@@ -194,7 +203,6 @@ abstract class AnniversaryBaseController<T extends StatefulWidget>
                               ],
                             ),
                           if (selectedImageLocalPath != null) ...[
-                            //const SizedBox(height: 12),
                             Row(
                               children: [
                                 ClipRRect(
@@ -232,25 +240,57 @@ abstract class AnniversaryBaseController<T extends StatefulWidget>
                               ],
                             ),
                           ] else if (selectedImageNetworkUrl != null) ...[
-                            const SizedBox(height: 12),
                             Row(
                               children: [
-                                const Icon(Icons.check_circle,
-                                    color: Colors.green, size: 20),
-                                const SizedBox(width: 8),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    selectedImageNetworkUrl!,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        width: 60,
+                                        height: 60,
+                                        color: Colors.grey[300],
+                                        child: const Center(
+                                          child: SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                      width: 60,
+                                      height: 60,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.broken_image),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    selectedImageNetworkUrl!,
+                                    '已选择网络图片',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontSize: 14),
                                   ),
                                 ),
-                                TextButton(
+                                IconButton(
                                   onPressed: () => setStateSheet(() {
                                     selectedImageNetworkUrl = null;
                                   }),
-                                  child: const Text('取消'),
+                                  icon: const Icon(Icons.cancel),
                                 ),
                               ],
                             ),
